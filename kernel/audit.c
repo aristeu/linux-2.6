@@ -609,10 +609,11 @@ static int audit_netlink_ok(struct sk_buff *skb, u16 msg_type)
 }
 
 static int audit_log_common_recv_msg(struct audit_buffer **ab, u16 msg_type,
-				     kuid_t auid, u32 ses, u32 sid)
+				     kuid_t auid, u32 ses, u32 sid,
+				     struct audit_context *ctx)
 {
 	int rc = 0;
-	char *ctx = NULL;
+	char *secctx = NULL;
 	u32 len;
 
 	if (!audit_enabled) {
@@ -620,7 +621,7 @@ static int audit_log_common_recv_msg(struct audit_buffer **ab, u16 msg_type,
 		return rc;
 	}
 
-	*ab = audit_log_start(NULL, GFP_KERNEL, msg_type);
+	*ab = audit_log_start(ctx, GFP_KERNEL, msg_type);
 	if (unlikely(!*ab))
 		return rc;
 	audit_log_format(*ab, "pid=%d uid=%u auid=%u ses=%u",
@@ -628,12 +629,12 @@ static int audit_log_common_recv_msg(struct audit_buffer **ab, u16 msg_type,
 			 from_kuid(&init_user_ns, current_uid()),
 			 from_kuid(&init_user_ns, auid), ses);
 	if (sid) {
-		rc = security_secid_to_secctx(sid, &ctx, &len);
+		rc = security_secid_to_secctx(sid, &secctx, &len);
 		if (rc)
 			audit_log_format(*ab, " ssid=%u", sid);
 		else {
-			audit_log_format(*ab, " subj=%s", ctx);
-			security_release_secctx(ctx, len);
+			audit_log_format(*ab, " subj=%s", secctx);
+			security_release_secctx(secctx, len);
 		}
 	}
 
@@ -739,7 +740,8 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 					break;
 			}
 			audit_log_common_recv_msg(&ab, msg_type,
-						  loginuid, sessionid, sid);
+						  loginuid, sessionid, sid,
+						  NULL);
 
 			if (msg_type != AUDIT_USER_TTY)
 				audit_log_format(ab, " msg='%.1024s'",
@@ -764,7 +766,8 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 			return -EINVAL;
 		if (audit_enabled == AUDIT_LOCKED) {
 			audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE,
-						  loginuid, sessionid, sid);
+						  loginuid, sessionid, sid,
+						  NULL);
 
 			audit_log_format(ab, " audit_enabled=%d res=0",
 					 audit_enabled);
@@ -783,7 +786,8 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 			return -EINVAL;
 		if (audit_enabled == AUDIT_LOCKED) {
 			audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE,
-						  loginuid, sessionid, sid);
+						  loginuid, sessionid, sid,
+						  NULL);
 
 			audit_log_format(ab, " audit_enabled=%d res=0",
 					 audit_enabled);
@@ -800,7 +804,8 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		audit_trim_trees();
 
 		audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE,
-					  loginuid, sessionid, sid);
+					  loginuid, sessionid, sid,
+					  NULL);
 
 		audit_log_format(ab, " op=trim res=1");
 		audit_log_end(ab);
@@ -832,7 +837,8 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 		err = audit_tag_tree(old, new);
 
 		audit_log_common_recv_msg(&ab, AUDIT_CONFIG_CHANGE,
-					  loginuid, sessionid, sid);
+					  loginuid, sessionid, sid,
+					  NULL);
 
 		audit_log_format(ab, " op=make_equiv old=");
 		audit_log_untrustedstring(ab, old);
