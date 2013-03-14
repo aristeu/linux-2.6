@@ -62,6 +62,11 @@
 #include <linux/freezer.h>
 #include <linux/tty.h>
 #include <linux/pid_namespace.h>
+#include <linux/ipc_namespace.h>
+#include <linux/mnt_namespace.h>
+#include <linux/utsname.h>
+#include <linux/user_namespace.h>
+#include <net/net_namespace.h>
 
 #include "audit.h"
 
@@ -641,6 +646,49 @@ static int audit_log_common_recv_msg(struct audit_buffer **ab, u16 msg_type,
 	return rc;
 }
 
+#ifdef CONFIG_NAMESPACES
+static int audit_log_namespaces(struct task_struct *tsk,
+				struct sk_buff *skb)
+{
+	struct audit_context *ctx = tsk->audit_context;
+	struct audit_buffer *ab;
+
+	if (!audit_enabled)
+		return 0;
+
+	ab = audit_log_start(ctx, GFP_KERNEL, AUDIT_USER_NAMESPACE);
+	if (unlikely(!ab))
+		return -ENOMEM;
+
+	audit_log_format(ab, "mnt=%u", mntns_get_inum(tsk));
+#ifdef CONFIG_NET_NS
+	audit_log_format(ab, " net=%u", netns_get_inum(tsk));
+#endif
+#ifdef CONFIG_UTS_NS
+	audit_log_format(ab, " uts=%u", utsns_get_inum(tsk));
+#endif
+#ifdef CONFIG_IPC_NS
+	audit_log_format(ab, " ipc=%u", ipcns_get_inum(tsk));
+#endif
+#ifdef CONFIG_PID_NS
+	audit_log_format(ab, " pid=%u", pidns_get_inum(tsk));
+#endif
+#ifdef CONFIG_USER_NS
+	audit_log_format(ab, " user=%u", userns_get_inum(tsk));
+#endif  
+	audit_set_pid(ab, NETLINK_CB(skb).portid);
+	audit_log_end(ab);
+
+	return 0;
+}
+#else
+static inline int audit_log_namespaces(struct task_struct *tsk,
+				       struct sk_buff *skb)
+{
+	return 0;
+}
+#endif
+
 static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 {
 	u32			seq, sid;
@@ -741,7 +789,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 			}
 			audit_log_common_recv_msg(&ab, msg_type,
 						  loginuid, sessionid, sid,
-						  NULL);
+						  current->audit_context);
 
 			if (msg_type != AUDIT_USER_TTY)
 				audit_log_format(ab, " msg='%.1024s'",
@@ -758,6 +806,7 @@ static int audit_receive_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 			}
 			audit_set_pid(ab, NETLINK_CB(skb).portid);
 			audit_log_end(ab);
+			audit_log_namespaces(current, skb);
 		}
 		break;
 	case AUDIT_ADD:
