@@ -856,6 +856,11 @@ static unsigned int userns_inum(void *ns)
 	return user_ns->proc_inum;
 }
 
+unsigned int userns_get_inum(struct task_struct *tsk)
+{
+	return userns_inum(task_cred_xxx(tsk, user_ns));
+}
+
 const struct proc_ns_operations userns_operations = {
 	.name		= "user",
 	.type		= CLONE_NEWUSER,

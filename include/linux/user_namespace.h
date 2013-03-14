@@ -56,6 +56,7 @@ extern struct seq_operations proc_projid_seq_operations;
 extern ssize_t proc_uid_map_write(struct file *, const char __user *, size_t, loff_t *);
 extern ssize_t proc_gid_map_write(struct file *, const char __user *, size_t, loff_t *);
 extern ssize_t proc_projid_map_write(struct file *, const char __user *, size_t, loff_t *);
+extern unsigned int userns_get_inum(struct task_struct *tsk);
 #else
 
 static inline struct user_namespace *get_user_ns(struct user_namespace *ns)
