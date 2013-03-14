@@ -146,6 +146,7 @@ static inline struct ipc_namespace *get_ipc_ns(struct ipc_namespace *ns)
 }
 
 extern void put_ipc_ns(struct ipc_namespace *ns);
+extern unsigned int ipcns_get_inum(struct task_struct *tsk);
 #else
 static inline struct ipc_namespace *copy_ipcs(unsigned long flags,
 	struct user_namespace *user_ns, struct ipc_namespace *ns)

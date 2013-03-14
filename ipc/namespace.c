@@ -188,6 +188,20 @@ static unsigned int ipcns_inum(void *vp)
 	return ns->proc_inum;
 }
 
+unsigned int ipcns_get_inum(struct task_struct *tsk)
+{
+	struct nsproxy *nsproxy;
+	unsigned int rc = 0;
+
+	rcu_read_lock();
+	nsproxy = task_nsproxy(tsk);
+	if (nsproxy)
+		rc = ipcns_inum(nsproxy->ipc_ns);
+	rcu_read_unlock();
+
+	return rc;
+}
+
 const struct proc_ns_operations ipcns_operations = {
 	.name		= "ipc",
 	.type		= CLONE_NEWIPC,
