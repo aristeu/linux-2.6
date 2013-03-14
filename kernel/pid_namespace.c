@@ -361,6 +361,17 @@ static unsigned int pidns_inum(void *ns)
 	return pid_ns->proc_inum;
 }
 
+unsigned int pidns_get_inum(struct task_struct *tsk)
+{
+	unsigned int rc;
+
+	rcu_read_lock();
+	rc = pidns_inum(task_active_pid_ns(tsk));
+	rcu_read_unlock();
+
+	return rc;
+}
+
 const struct proc_ns_operations pidns_operations = {
 	.name		= "pid",
 	.type		= CLONE_NEWPID,
