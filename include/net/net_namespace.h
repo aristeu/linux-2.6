@@ -134,6 +134,7 @@ extern struct net init_net;
 #ifdef CONFIG_NET_NS
 extern struct net *copy_net_ns(unsigned long flags,
 	struct user_namespace *user_ns, struct net *old_net);
+extern unsigned int netns_get_inum(struct task_struct *tsk);
 
 #else /* CONFIG_NET_NS */
 #include <linux/sched.h>

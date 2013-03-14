@@ -664,6 +664,20 @@ static unsigned int netns_inum(void *ns)
 	return net->proc_inum;
 }
 
+unsigned int netns_get_inum(struct task_struct *tsk)
+{
+	struct nsproxy *nsproxy;
+	unsigned int rc = 0;
+
+	rcu_read_lock();
+	nsproxy = task_nsproxy(tsk);
+	if (nsproxy)
+		rc = netns_inum(nsproxy->net_ns);
+	rcu_read_unlock();
+
+	return rc;
+}
+
 const struct proc_ns_operations netns_operations = {
 	.name		= "net",
 	.type		= CLONE_NEWNET,
