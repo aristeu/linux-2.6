@@ -2792,6 +2792,20 @@ static unsigned int mntns_inum(void *ns)
 	return mnt_ns->proc_inum;
 }
 
+unsigned int mntns_get_inum(struct task_struct *tsk)
+{
+	struct nsproxy *nsproxy;
+	int rc = 0;
+
+	rcu_read_lock();
+	nsproxy = task_nsproxy(tsk);
+	if (nsproxy)
+		rc = mntns_inum(nsproxy->mnt_ns);
+	rcu_read_unlock();
+
+	return rc;
+}
+
 const struct proc_ns_operations mntns_operations = {
 	.name		= "mnt",
 	.type		= CLONE_NEWNS,

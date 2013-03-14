@@ -5,10 +5,12 @@
 struct mnt_namespace;
 struct fs_struct;
 struct user_namespace;
+struct task_struct;
 
 extern struct mnt_namespace *copy_mnt_ns(unsigned long, struct mnt_namespace *,
 		struct user_namespace *, struct fs_struct *);
 extern void put_mnt_ns(struct mnt_namespace *ns);
+extern unsigned int mntns_get_inum(struct task_struct *tsk);
 
 extern const struct file_operations proc_mounts_operations;
 extern const struct file_operations proc_mountinfo_operations;
