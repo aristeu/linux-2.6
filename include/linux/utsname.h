@@ -36,6 +36,7 @@ static inline void get_uts_ns(struct uts_namespace *ns)
 extern struct uts_namespace *copy_utsname(unsigned long flags,
 	struct user_namespace *user_ns, struct uts_namespace *old_ns);
 extern void free_uts_ns(struct kref *kref);
+extern unsigned int utsns_get_inum(struct task_struct *tsk);
 
 static inline void put_uts_ns(struct uts_namespace *ns)
 {

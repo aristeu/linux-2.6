@@ -130,6 +130,20 @@ static unsigned int utsns_inum(void *vp)
 	return ns->proc_inum;
 }
 
+unsigned int utsns_get_inum(struct task_struct *tsk)
+{
+	struct nsproxy *nsproxy;
+	unsigned int rc = 0;
+
+	rcu_read_lock();
+	nsproxy = task_nsproxy(tsk);
+	if (nsproxy)
+		rc = utsns_inum(task_nsproxy(tsk)->uts_ns);
+	rcu_read_unlock();
+
+	return rc;
+}
+
 const struct proc_ns_operations utsns_operations = {
 	.name		= "uts",
 	.type		= CLONE_NEWUTS,
