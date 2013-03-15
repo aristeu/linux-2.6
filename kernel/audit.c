@@ -570,6 +570,23 @@ out:
 	kfree(reply);
 }
 
+static int audit_namespace_check(struct task_struct *tsk, u16 msg_type)
+{
+	/* USER messages are allowed from inside containers */
+	switch (msg_type) {
+	case AUDIT_USER:
+	case AUDIT_FIRST_USER_MSG ... AUDIT_LAST_USER_MSG:
+	case AUDIT_FIRST_USER_MSG2 ... AUDIT_LAST_USER_MSG2:
+		return 1;
+	default:
+		if ((current_user_ns() != &init_user_ns) ||
+		    (task_active_pid_ns(current) != &init_pid_ns))
+			return 0;
+		break;
+	}
+	return 1;
+}
+
 /*
  * Check for appropriate CAP_AUDIT_ capabilities on incoming audit
  * control messages.
@@ -578,9 +595,7 @@ static int audit_netlink_ok(struct sk_buff *skb, u16 msg_type)
 {
 	int err = 0;
 
-	/* Only support the initial namespaces for now. */
-	if ((current_user_ns() != &init_user_ns) ||
-	    (task_active_pid_ns(current) != &init_pid_ns))
+	if (!audit_namespace_check(current, msg_type))
 		return -EPERM;
 
 	switch (msg_type) {
@@ -597,13 +612,13 @@ static int audit_netlink_ok(struct sk_buff *skb, u16 msg_type)
 	case AUDIT_TTY_SET:
 	case AUDIT_TRIM:
 	case AUDIT_MAKE_EQUIV:
-		if (!capable(CAP_AUDIT_CONTROL))
+		if (!nsown_capable(CAP_AUDIT_CONTROL))
 			err = -EPERM;
 		break;
 	case AUDIT_USER:
 	case AUDIT_FIRST_USER_MSG ... AUDIT_LAST_USER_MSG:
 	case AUDIT_FIRST_USER_MSG2 ... AUDIT_LAST_USER_MSG2:
-		if (!capable(CAP_AUDIT_WRITE))
+		if (!nsown_capable(CAP_AUDIT_WRITE))
 			err = -EPERM;
 		break;
 	default:  /* bad msg */
