@@ -3,6 +3,7 @@ ifeq ($(CONFIG_OF),y)
 dtb-$(CONFIG_MACH_ASM9260) += \
 	alphascale-asm9260-devkit.dtb
 # Keep at91 dtb files sorted alphabetically for each SoC
+<<<<<<< HEAD
 dtb-$(CONFIG_SOC_SAM_V4_V5) += \
 	at91rm9200ek.dtb \
 	mpa1600.dtb \
@@ -52,6 +53,8 @@ dtb-$(CONFIG_ARCH_AXXIA) += \
 dtb-$(CONFIG_ARCH_BCM2835) += \
 	bcm2835-rpi-b.dtb \
 	bcm2835-rpi-b-plus.dtb
+dtb-$(CONFIG_BCM2708_DT) += \
+	bcm2708-rpi-b.dtb
 dtb-$(CONFIG_ARCH_BCM_5301X) += \
 	bcm4708-buffalo-wzr-1750dhp.dtb \
 	bcm4708-luxul-xwc-1000.dtb \
