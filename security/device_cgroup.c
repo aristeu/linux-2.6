@@ -48,6 +48,7 @@ struct dev_exception_item {
 struct dev_cgroup {
 	struct cgroup_subsys_state css;
 	struct list_head exceptions;
+	struct list_head local_exceptions;
 	enum devcg_behavior behavior;
 };
 
@@ -90,18 +91,16 @@ free_and_exit:
 /*
  * called under devcgroup_mutex
  */
-static int dev_exception_add(struct dev_cgroup *dev_cgroup,
-			     struct dev_exception_item *ex)
+static int __dev_exception_add(struct list_head *ex_list,
+			       struct dev_exception_item *ex)
 {
 	struct dev_exception_item *excopy, *walk;
-
-	lockdep_assert_held(&devcgroup_mutex);
 
 	excopy = kmemdup(ex, sizeof(*ex), GFP_KERNEL);
 	if (!excopy)
 		return -ENOMEM;
 
-	list_for_each_entry(walk, &dev_cgroup->exceptions, list) {
+	list_for_each_entry(walk, ex_list, list) {
 		if (walk->type != ex->type)
 			continue;
 		if (walk->major != ex->major)
@@ -115,21 +114,27 @@ static int dev_exception_add(struct dev_cgroup *dev_cgroup,
 	}
 
 	if (excopy != NULL)
-		list_add_tail_rcu(&excopy->list, &dev_cgroup->exceptions);
+		list_add_tail_rcu(&excopy->list, ex_list);
 	return 0;
+}
+
+static int dev_exception_add(struct dev_cgroup *dev_cgroup,
+			     struct dev_exception_item *ex)
+{
+	lockdep_assert_held(&devcgroup_mutex);
+
+	return __dev_exception_add(&dev_cgroup->exceptions, ex);
 }
 
 /*
  * called under devcgroup_mutex
  */
-static void dev_exception_rm(struct dev_cgroup *dev_cgroup,
-			     struct dev_exception_item *ex)
+static void __dev_exception_rm(struct list_head *ex_list,
+			       struct dev_exception_item *ex)
 {
 	struct dev_exception_item *walk, *tmp;
 
-	lockdep_assert_held(&devcgroup_mutex);
-
-	list_for_each_entry_safe(walk, tmp, &dev_cgroup->exceptions, list) {
+	list_for_each_entry_safe(walk, tmp, ex_list, list) {
 		if (walk->type != ex->type)
 			continue;
 		if (walk->major != ex->major)
@@ -145,11 +150,19 @@ static void dev_exception_rm(struct dev_cgroup *dev_cgroup,
 	}
 }
 
-static void __dev_exception_clean(struct dev_cgroup *dev_cgroup)
+static void dev_exception_rm(struct dev_cgroup *dev_cgroup,
+			     struct dev_exception_item *ex)
+{
+	lockdep_assert_held(&devcgroup_mutex);
+
+	__dev_exception_rm(&dev_cgroup->exceptions, ex);
+}
+
+static void __dev_exception_clean(struct list_head *ex_list)
 {
 	struct dev_exception_item *ex, *tmp;
 
-	list_for_each_entry_safe(ex, tmp, &dev_cgroup->exceptions, list) {
+	list_for_each_entry_safe(ex, tmp, ex_list, list) {
 		list_del_rcu(&ex->list);
 		kfree_rcu(ex, rcu);
 	}
@@ -165,7 +178,30 @@ static void dev_exception_clean(struct dev_cgroup *dev_cgroup)
 {
 	lockdep_assert_held(&devcgroup_mutex);
 
-	__dev_exception_clean(dev_cgroup);
+	__dev_exception_clean(&dev_cgroup->exceptions);
+}
+
+static void dev_local_ex_rm(struct dev_cgroup *dev_cgroup,
+			      struct dev_exception_item *ex)
+{
+	lockdep_assert_held(&devcgroup_mutex);
+
+	__dev_exception_rm(&dev_cgroup->local_exceptions, ex);
+}
+
+static int dev_local_ex_add(struct dev_cgroup *dev_cgroup,
+			      struct dev_exception_item *ex)
+{
+	lockdep_assert_held(&devcgroup_mutex);
+
+	return __dev_exception_add(&dev_cgroup->local_exceptions, ex);
+}
+
+static void dev_local_ex_clean(struct dev_cgroup *dev_cgroup)
+{
+	lockdep_assert_held(&devcgroup_mutex);
+
+	__dev_exception_clean(&dev_cgroup->local_exceptions);
 }
 
 static inline bool is_devcg_online(const struct dev_cgroup *devcg)
@@ -221,6 +257,7 @@ devcgroup_css_alloc(struct cgroup_subsys_state *parent_css)
 	if (!dev_cgroup)
 		return ERR_PTR(-ENOMEM);
 	INIT_LIST_HEAD(&dev_cgroup->exceptions);
+	INIT_LIST_HEAD(&dev_cgroup->local_exceptions);
 	dev_cgroup->behavior = DEVCG_DEFAULT_NONE;
 
 	return &dev_cgroup->css;
@@ -230,7 +267,8 @@ static void devcgroup_css_free(struct cgroup_subsys_state *css)
 {
 	struct dev_cgroup *dev_cgroup = css_to_devcgroup(css);
 
-	__dev_exception_clean(dev_cgroup);
+	__dev_exception_clean(&dev_cgroup->exceptions);
+	__dev_exception_clean(&dev_cgroup->local_exceptions);
 	kfree(dev_cgroup);
 }
 
@@ -625,6 +663,7 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 			if (!may_allow_all(parent))
 				return -EPERM;
 			dev_exception_clean(devcgroup);
+			dev_local_ex_clean(devcgroup);
 			devcgroup->behavior = DEVCG_DEFAULT_ALLOW;
 			if (!parent)
 				break;
@@ -639,6 +678,7 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 				return -EINVAL;
 
 			dev_exception_clean(devcgroup);
+			dev_local_ex_clean(devcgroup);
 			devcgroup->behavior = DEVCG_DEFAULT_DENY;
 			break;
 		default:
@@ -731,12 +771,19 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 			if (!parent_allows_removal(devcgroup, &ex))
 				return -EPERM;
 			dev_exception_rm(devcgroup, &ex);
+			dev_local_ex_rm(devcgroup, &ex);
 			break;
 		}
 
 		if (!parent_has_perm(devcgroup, &ex))
 			return -EPERM;
+
+		rc = dev_local_ex_add(devcgroup, &ex);
+		if (rc)
+			break;
 		rc = dev_exception_add(devcgroup, &ex);
+		if (rc)
+			dev_local_ex_rm(devcgroup, &ex);
 		break;
 	case DEVCG_DENY:
 		/*
@@ -744,10 +791,17 @@ static int devcgroup_update_access(struct dev_cgroup *devcgroup,
 		 * an matching exception instead. And be silent about it: we
 		 * don't want to break compatibility
 		 */
-		if (devcgroup->behavior == DEVCG_DEFAULT_DENY)
+		if (devcgroup->behavior == DEVCG_DEFAULT_DENY) {
 			dev_exception_rm(devcgroup, &ex);
-		else
-			rc = dev_exception_add(devcgroup, &ex);
+			dev_local_ex_rm(devcgroup, &ex);
+		} else {
+			rc = dev_local_ex_add(devcgroup, &ex);
+			if (!rc) {
+				rc = dev_exception_add(devcgroup, &ex);
+				if (rc)
+					dev_local_ex_rm(devcgroup, &ex);
+			}
+		}
 
 		if (rc)
 			break;
