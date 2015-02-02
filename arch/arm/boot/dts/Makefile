@@ -59,7 +59,9 @@ endif
 ifeq ($(CONFIG_BCM2709_DT),y)
    RPI_DT_OVERLAYS=y
 endif
-dtb-$(CONFIG_BCM2708_DT) += \
+dtb-$(CONFIG_BCM2709_DT) += \
+	bcm2709-rpi-2-b.dtb
+dtb-$(RPI_DT_OVERLAYS) += \
 	bcm2708-rpi-b.dtb \
 	bcm2708-rpi-b-plus.dtb \
 	hifiberry-dac-overlay.dtb \
