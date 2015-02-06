@@ -70,6 +70,7 @@ dtb-$(RPI_DT_OVERLAYS) += \
 	hifiberry-amp-overlay.dtb \
 	iqaudio-dac-overlay.dtb \
 	iqaudio-dacplus-overlay.dtb \
+	pcf2127-rtc-overlay.dtb \
 	pcf8523-rtc-overlay.dtb \
 	lirc-rpi-overlay.dtb \
 	pps-gpio-overlay.dtb \
