@@ -49,9 +49,6 @@ dtb-$(CONFIG_ARCH_ATLAS7) += \
 	atlas7-evb.dtb
 dtb-$(CONFIG_ARCH_AXXIA) += \
 	axm5516-amarillo.dtb
-dtb-$(CONFIG_ARCH_BCM2835) += \
-	bcm2835-rpi-b.dtb \
-	bcm2835-rpi-b-plus.dtb
 # Raspberry Pi
 ifeq ($(CONFIG_BCM2708_DT),y)
    RPI_DT_OVERLAYS=y
@@ -59,11 +56,14 @@ endif
 ifeq ($(CONFIG_BCM2709_DT),y)
    RPI_DT_OVERLAYS=y
 endif
+dtb-$(CONFIG_BCM2708_DT) += \
+	bcm2708-rpi-b.dtb
+dtb-$(CONFIG_BCM2708_DT) += \
+	bcm2708-rpi-b-plus.dtb
 dtb-$(CONFIG_BCM2709_DT) += \
 	bcm2709-rpi-2-b.dtb
 dtb-$(RPI_DT_OVERLAYS) += \
-	bcm2708-rpi-b.dtb \
-	bcm2708-rpi-b-plus.dtb \
+	bmp085_i2c-sensor-overlay.dtb \
 	hifiberry-dac-overlay.dtb \
 	hifiberry-dacplus-overlay.dtb \
 	hifiberry-digi-overlay.dtb \
