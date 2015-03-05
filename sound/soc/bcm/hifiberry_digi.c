@@ -94,7 +94,7 @@ static int snd_rpi_hifiberry_digi_hw_params(struct snd_pcm_substream *substream,
 			mclk_div=WM8804_MCLKDIV_128FS;
 			break;
 		default:
-			dev_err(substream->pcm->dev,
+			dev_err(codec->dev,
 			"Failed to set WM8804 SYSCLK, unsupported samplerate %d\n",
 			samplerate);
 	}
@@ -105,7 +105,7 @@ static int snd_rpi_hifiberry_digi_hw_params(struct snd_pcm_substream *substream,
 	ret = snd_soc_dai_set_sysclk(codec_dai, WM8804_TX_CLKSRC_PLL,
 					sysclk, SND_SOC_CLOCK_OUT);
 	if (ret < 0) {
-		dev_err(substream->pcm->dev,
+		dev_err(codec->dev,
 		"Failed to set WM8804 SYSCLK: %d\n", ret);
 		return ret;
 	}
