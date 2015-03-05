@@ -38,7 +38,6 @@ else
   mmu-y	+= uaccess.o
 endif
 endif
->>>>>>> 861c08a... Improve __copy_to_user and __copy_from_user performance
 
 # using lib_ here won't override already available weak symbols
 obj-$(CONFIG_UACCESS_WITH_MEMCPY) += uaccess_with_memcpy.o
