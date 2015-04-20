@@ -171,6 +171,7 @@ static int sf_setstate(struct ip_mc_list *pmc);
 static void sf_markstate(struct ip_mc_list *pmc);
 #else
 static inline void sf_markstate(struct ip_mc_list *pmc) { }
+static inline void igmpv3_del_delrec(struct in_device *in_dev, __be32 multiaddr) {}
 #endif
 static void ip_mc_clear_src(struct ip_mc_list *pmc);
 static int ip_mc_add_src(struct in_device *in_dev, __be32 *pmca, int sfmode,
@@ -1339,9 +1340,7 @@ void ip_mc_inc_group(struct in_device *in_dev, __be32 addr)
 
 	ip_mc_hash_add(in_dev, im);
 
-#ifdef CONFIG_IP_MULTICAST
 	igmpv3_del_delrec(in_dev, im->multiaddr);
-#endif
 	igmp_group_added(im);
 	if (!in_dev->dead)
 		ip_rt_multicast_event(in_dev);
