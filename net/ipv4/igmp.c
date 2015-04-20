@@ -169,6 +169,8 @@ static void igmpv3_del_delrec(struct in_device *in_dev, __be32 multiaddr);
 static void igmpv3_clear_delrec(struct in_device *in_dev);
 static int sf_setstate(struct ip_mc_list *pmc);
 static void sf_markstate(struct ip_mc_list *pmc);
+#else
+static inline void sf_markstate(struct ip_mc_list *pmc) { }
 #endif
 static void ip_mc_clear_src(struct ip_mc_list *pmc);
 static int ip_mc_add_src(struct in_device *in_dev, __be32 *pmca, int sfmode,
@@ -1613,9 +1615,7 @@ static int ip_mc_del_src(struct in_device *in_dev, __be32 *pmca, int sfmode,
 	}
 	spin_lock_bh(&pmc->lock);
 	rcu_read_unlock();
-#ifdef CONFIG_IP_MULTICAST
 	sf_markstate(pmc);
-#endif
 	if (!delta) {
 		err = -EINVAL;
 		if (!pmc->sfcount[sfmode])
@@ -1784,10 +1784,7 @@ static int ip_mc_add_src(struct in_device *in_dev, __be32 *pmca, int sfmode,
 	}
 	spin_lock_bh(&pmc->lock);
 	rcu_read_unlock();
-
-#ifdef CONFIG_IP_MULTICAST
 	sf_markstate(pmc);
-#endif
 	isexclude = pmc->sfmode == MCAST_EXCLUDE;
 	if (!delta)
 		pmc->sfcount[sfmode]++;
