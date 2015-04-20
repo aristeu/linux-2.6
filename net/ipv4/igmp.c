@@ -1166,21 +1166,11 @@ static void igmpv3_clear_delrec(struct in_device *in_dev)
 	}
 	rcu_read_unlock();
 }
-#endif
 
-static void igmp_group_dropped(struct ip_mc_list *im)
-{
+static inline void igmp_mc_group_dropped(struct ip_mc_list *im) {
 	struct in_device *in_dev = im->interface;
-#ifdef CONFIG_IP_MULTICAST
 	int reporter;
-#endif
 
-	if (im->loaded) {
-		im->loaded = 0;
-		ip_mc_filter_del(in_dev, im->multiaddr);
-	}
-
-#ifdef CONFIG_IP_MULTICAST
 	if (im->multiaddr == IGMP_ALL_HOSTS)
 		return;
 
@@ -1200,19 +1190,11 @@ static void igmp_group_dropped(struct ip_mc_list *im)
 
 		igmp_ifc_event(in_dev);
 	}
-#endif
 }
-
-static void igmp_group_added(struct ip_mc_list *im)
+static inline void igmp_mc_group_added(struct ip_mc_list *im)
 {
 	struct in_device *in_dev = im->interface;
 
-	if (im->loaded == 0) {
-		im->loaded = 1;
-		ip_mc_filter_add(in_dev, im->multiaddr);
-	}
-
-#ifdef CONFIG_IP_MULTICAST
 	if (im->multiaddr == IGMP_ALL_HOSTS)
 		return;
 
@@ -1228,7 +1210,34 @@ static void igmp_group_added(struct ip_mc_list *im)
 
 	im->crcount = in_dev->mr_qrv ?: sysctl_igmp_qrv;
 	igmp_ifc_event(in_dev);
+}
+#else
+static inline void igmp_mc_group_dropped(struct ip_mc_list *im) {}
+static inline void igmp_mc_group_added(struct ip_mc_list *im) {}
 #endif
+
+static void igmp_group_dropped(struct ip_mc_list *im)
+{
+	struct in_device *in_dev = im->interface;
+
+	if (im->loaded) {
+		im->loaded = 0;
+		ip_mc_filter_del(in_dev, im->multiaddr);
+	}
+
+	igmp_mc_group_dropped(im);
+}
+
+static void igmp_group_added(struct ip_mc_list *im)
+{
+	struct in_device *in_dev = im->interface;
+
+	if (im->loaded == 0) {
+		im->loaded = 1;
+		ip_mc_filter_add(in_dev, im->multiaddr);
+	}
+
+	igmp_mc_group_added(im);
 }
 
 
