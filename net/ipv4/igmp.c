@@ -140,6 +140,12 @@
 	 IN_DEV_CONF_GET((in_dev), FORCE_IGMP_VERSION) == 2 || \
 	 ((in_dev)->mr_v2_seen && \
 	  time_before(jiffies, (in_dev)->mr_v2_seen)))
+static inline char *igmp_version_seen(struct in_device *in_dev)
+{
+	return IGMP_V1_SEEN(state->in_dev) ? "V1" :
+	       IGMP_V2_SEEN(state->in_dev) ? "V2" :
+	       "V3";
+}
 
 static int unsolicited_report_interval(struct in_device *in_dev)
 {
@@ -172,6 +178,10 @@ static void sf_markstate(struct ip_mc_list *pmc);
 #else
 static inline void sf_markstate(struct ip_mc_list *pmc) { }
 static inline void igmpv3_del_delrec(struct in_device *in_dev, __be32 multiaddr) {}
+static inline char *igmp_version_seen(struct in_device *in_dev)
+{
+	return "NONE";
+}
 #endif
 static void ip_mc_clear_src(struct ip_mc_list *pmc);
 static int ip_mc_add_src(struct in_device *in_dev, __be32 *pmca, int sfmode,
@@ -2526,13 +2536,7 @@ static int igmp_mc_seq_show(struct seq_file *seq, void *v)
 		char   *querier;
 		long delta;
 
-#ifdef CONFIG_IP_MULTICAST
-		querier = IGMP_V1_SEEN(state->in_dev) ? "V1" :
-			  IGMP_V2_SEEN(state->in_dev) ? "V2" :
-			  "V3";
-#else
-		querier = "NONE";
-#endif
+		querier = igmp_version_seen(state->in_dev);
 
 		if (rcu_access_pointer(state->in_dev->mc_list) == im) {
 			seq_printf(seq, "%d\t%-10s: %5d %7s\n",
