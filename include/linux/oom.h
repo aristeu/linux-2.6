@@ -115,6 +115,7 @@ static inline bool task_will_free_mem(struct task_struct *task)
 
 /* sysctls */
 extern int sysctl_oom_dump_tasks;
+extern int sysctl_oom_dump_stack;
 extern int sysctl_oom_kill_allocating_task;
 extern int sysctl_panic_on_oom;
 #endif /* _INCLUDE_LINUX_OOM_H */

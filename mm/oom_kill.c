@@ -42,6 +42,7 @@
 int sysctl_panic_on_oom;
 int sysctl_oom_kill_allocating_task;
 int sysctl_oom_dump_tasks = 1;
+int sysctl_oom_dump_stack = 1;
 
 DEFINE_MUTEX(oom_lock);
 
@@ -384,7 +385,8 @@ static void dump_header(struct oom_control *oc, struct task_struct *p,
 		current->signal->oom_score_adj);
 	cpuset_print_task_mems_allowed(current);
 	task_unlock(current);
-	dump_stack();
+	if (sysctl_oom_dump_stack)
+		dump_stack();
 	if (memcg)
 		mem_cgroup_print_oom_info(memcg, p);
 	else
