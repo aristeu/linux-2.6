@@ -43,7 +43,6 @@ ieee802154_subif_frame(struct ieee802154_sub_if_data *sdata,
 {
 	struct wpan_dev *wpan_dev = &sdata->wpan_dev;
 	__le16 span, sshort;
-	int rc;
 
 	pr_debug("getting packet via slave interface %s\n", sdata->dev->name);
 
@@ -86,16 +85,6 @@ ieee802154_subif_frame(struct ieee802154_sub_if_data *sdata,
 	}
 
 	skb->dev = sdata->dev;
-
-	/* TODO this should be moved after netif_receive_skb call, otherwise
-	 * wireshark will show a mac header with security fields and the
-	 * payload is already decrypted.
-	 */
-	rc = mac802154_llsec_decrypt(&sdata->sec, skb);
-	if (rc) {
-		pr_debug("decryption failed: %i\n", rc);
-		goto fail;
-	}
 
 	sdata->dev->stats.rx_packets++;
 	sdata->dev->stats.rx_bytes += skb->len;

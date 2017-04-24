@@ -693,6 +693,10 @@ static int dgram_sendmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	skb->sk  = sk;
 	skb->protocol = htons(ETH_P_IEEE802154);
 
+	err = ieee802154_encrypt(skb);
+	if (err)
+		goto out_skb;
+
 	dev_put(dev);
 
 	err = dev_queue_xmit(skb);
@@ -1056,6 +1060,8 @@ static const struct net_proto_family ieee802154_family_ops = {
 static int ieee802154_rcv(struct sk_buff *skb, struct net_device *dev,
 			  struct packet_type *pt, struct net_device *orig_dev)
 {
+	int rc;
+
 	if (!netif_running(dev))
 		goto drop;
 	pr_debug("got frame, type %d, dev %p\n", dev->type, dev);
@@ -1072,8 +1078,12 @@ static int ieee802154_rcv(struct sk_buff *skb, struct net_device *dev,
 	if (dev->type != ARPHRD_IEEE802154)
 		goto drop;
 
-	if (skb->pkt_type != PACKET_OTHERHOST)
+	if (skb->pkt_type != PACKET_OTHERHOST) {
+		rc = ieee802154_decrypt(skb);
+		if (rc)
+			goto drop;
 		return ieee802154_dgram_deliver(dev, skb);
+	}
 
 drop:
 	kfree_skb(skb);

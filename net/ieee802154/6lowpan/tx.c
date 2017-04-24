@@ -145,6 +145,7 @@ lowpan_xmit_fragment(struct sk_buff *skb, const struct ieee802154_hdr *wpan_hdr,
 		     int offset, int len, bool frag1)
 {
 	struct sk_buff *frag;
+	int rc;
 
 	raw_dump_inline(__func__, " fragment header", frag_hdr, frag_hdrlen);
 
@@ -156,6 +157,12 @@ lowpan_xmit_fragment(struct sk_buff *skb, const struct ieee802154_hdr *wpan_hdr,
 	memcpy(skb_put(frag, len), skb_network_header(skb) + offset, len);
 
 	raw_dump_table(__func__, " fragment dump", frag->data, frag->len);
+
+	rc = ieee802154_encrypt(frag);
+	if (rc) {
+		kfree_skb(frag);
+		return rc;
+	}
 
 	return dev_queue_xmit(frag);
 }
@@ -287,6 +294,11 @@ netdev_tx_t lowpan_xmit(struct sk_buff *skb, struct net_device *ldev)
 		skb->dev = lowpan_802154_dev(ldev)->wdev;
 		ldev->stats.tx_packets++;
 		ldev->stats.tx_bytes += dgram_size;
+		ret = ieee802154_encrypt(skb);
+		if (ret) {
+			kfree_skb(skb);
+			return NET_XMIT_DROP;
+		}
 		return dev_queue_xmit(skb);
 	} else {
 		netdev_tx_t rc;

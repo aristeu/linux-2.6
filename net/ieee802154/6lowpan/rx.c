@@ -280,10 +280,15 @@ static int lowpan_rcv(struct sk_buff *skb, struct net_device *wdev,
 		      struct packet_type *pt, struct net_device *orig_wdev)
 {
 	struct net_device *ldev;
+	int rc;
 
 	if (wdev->type != ARPHRD_IEEE802154 ||
 	    skb->pkt_type == PACKET_OTHERHOST ||
 	    !lowpan_rx_h_check(skb))
+		goto drop;
+
+	rc = ieee802154_decrypt(skb);
+	if (rc)
 		goto drop;
 
 	ldev = wdev->ieee802154_ptr->lowpan_dev;
