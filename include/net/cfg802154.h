@@ -186,6 +186,8 @@ enum wpan_phy_flags {
  * the hardware implements it.
  */
 struct wpan_dev_hardmac_ops {
+       int     (*encrypt)(struct sk_buff *skb);
+       int     (*decrypt)(struct sk_buff *skb);
 };
 
 struct wpan_phy {
@@ -390,6 +392,51 @@ wpan_dev_hard_header(struct sk_buff *skb, struct net_device *dev,
 	struct wpan_dev *wpan_dev = dev->ieee802154_ptr;
 
 	return wpan_dev->header_ops->create(skb, dev, daddr, saddr, len);
+}
+
+/**
+ * ieee802154_encrypt - encrypt a skb before queueing for transmission
+ *
+ * @skb: skb to be encrypted
+ *
+ * This function will use hardware assisted encryption if available and should
+ * be used before calling dev_queue_xmit()
+ */
+static inline int
+ieee802154_encrypt(struct sk_buff *skb)
+{
+	struct net_device *dev = skb->dev;
+	struct wpan_dev *wpan_dev = dev->ieee802154_ptr;
+	struct wpan_phy *phy = wpan_dev->wpan_phy;
+	int rc;
+
+	rc = phy->hardmac_ops.encrypt(skb);
+	if (rc)
+		netdev_warn(dev, "encryption failed: %i\n", rc);
+
+	return rc;
+}
+
+/**
+ * ieee802154_decrypt - decrypt a skb after reception
+ *
+ * @skb: skb to be decrypted
+ *
+ * This function will use hardware assisted decryption if available
+ */
+static inline int
+ieee802154_decrypt(struct sk_buff *skb)
+{
+	struct net_device *dev = skb->dev;
+	struct wpan_dev *wpan_dev = dev->ieee802154_ptr;
+	struct wpan_phy *phy = wpan_dev->wpan_phy;
+	int rc;
+
+	rc = phy->hardmac_ops.decrypt(skb);
+	if (rc)
+		netdev_warn(dev, "decryption failed: %i\n", rc);
+
+	return rc;
 }
 
 struct wpan_phy *

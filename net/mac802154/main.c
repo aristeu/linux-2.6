@@ -51,7 +51,28 @@ static void ieee802154_tasklet_handler(unsigned long data)
 	}
 }
 
-static struct wpan_dev_hardmac_ops default_hardmac_ops = {};
+static int ieee802154_sw_encrypt(struct sk_buff *skb)
+{
+	struct net_device *dev = skb->dev;
+	struct wpan_dev *wpan_dev = dev->ieee802154_ptr;
+	struct ieee802154_sub_if_data *sdata = IEEE802154_WPAN_DEV_TO_SUB_IF(wpan_dev);
+
+	return mac802154_llsec_encrypt(&sdata->sec, skb);
+}
+
+static int ieee802154_sw_decrypt(struct sk_buff *skb)
+{
+	struct net_device *dev = skb->dev;
+	struct wpan_dev *wpan_dev = dev->ieee802154_ptr;
+	struct ieee802154_sub_if_data *sdata = IEEE802154_WPAN_DEV_TO_SUB_IF(wpan_dev);
+
+	return mac802154_llsec_decrypt(&sdata->sec, skb);
+}
+
+static struct wpan_dev_hardmac_ops default_hardmac_ops = {
+	.encrypt = ieee802154_sw_encrypt,
+	.decrypt = ieee802154_sw_decrypt,
+};
 
 struct ieee802154_hw *
 ieee802154_alloc_hw(size_t priv_data_len, const struct ieee802154_ops *ops)
