@@ -181,6 +181,13 @@ enum wpan_phy_flags {
 	WPAN_PHY_FLAG_CCA_MODE		= BIT(3),
 };
 
+/*
+ * Hard MAC functions, can be overrided by the driver in case
+ * the hardware implements it.
+ */
+struct wpan_dev_hardmac_ops {
+};
+
 struct wpan_phy {
 	/* If multiple wpan_phys are registered and you're handed e.g.
 	 * a regular netdev with assigned ieee802154_ptr, you won't
@@ -221,6 +228,9 @@ struct wpan_phy {
 
 	/* the network namespace this phy lives in currently */
 	possible_net_t _net;
+
+	/* MAC functions implemented in hardware */
+	struct wpan_dev_hardmac_ops hardmac_ops;
 
 	char priv[0] __aligned(NETDEV_ALIGN);
 };

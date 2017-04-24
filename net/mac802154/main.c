@@ -51,6 +51,8 @@ static void ieee802154_tasklet_handler(unsigned long data)
 	}
 }
 
+static struct wpan_dev_hardmac_ops default_hardmac_ops = {};
+
 struct ieee802154_hw *
 ieee802154_alloc_hw(size_t priv_data_len, const struct ieee802154_ops *ops)
 {
@@ -89,6 +91,8 @@ ieee802154_alloc_hw(size_t priv_data_len, const struct ieee802154_ops *ops)
 	}
 
 	phy->privid = mac802154_wpan_phy_privid;
+	memcpy(&phy->hardmac_ops, &default_hardmac_ops,
+	       sizeof(default_hardmac_ops));
 
 	local = wpan_phy_priv(phy);
 	local->phy = phy;
